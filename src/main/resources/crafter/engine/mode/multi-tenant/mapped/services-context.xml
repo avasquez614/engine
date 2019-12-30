@@ -1,21 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <bean name="crafter.properties" class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
-        <property name="order" value="0"/>
-        <property name="locations">
+    <bean class="org.craftercms.commons.spring.ListMergingPostProcessor">
+        <property name="order" value="0" />
+        <property name="beanName" value="crafter.properties" />
+        <property name="propertyName" value="locations" />
+        <property name="additionalElements">
             <list>
-                <value>classpath:crafter/core/core.properties</value>
-                <value>classpath:crafter/security/security.properties</value>
-                <value>classpath:crafter/engine/server-config.properties</value>
                 <value>classpath:crafter/engine/mode/multi-tenant/mapped/server-config.properties</value>
-                <value>${crafter.engine.extension.base}/overlay-config.properties</value>
-                <value>${crafter.engine.extension.base}/server-config.properties</value>
             </list>
         </property>
-        <property name="ignoreUnresolvablePlaceholders" value="true" />
     </bean>
 
     <!-- ////////////////////////////////// -->
@@ -29,6 +42,10 @@
         <property name="siteContextManager" ref="crafter.siteContextManager"/>
     </bean>
 
+    <bean id="crafter.headerSiteResolver" class="org.craftercms.engine.service.context.HeaderSiteResolver">
+        <property name="headerName" value="${crafter.engine.request.header.siteName}"/>
+    </bean>
+
     <bean id="crafter.cookieSiteResolver" class="org.craftercms.engine.service.context.CookieSiteResolver">
         <property name="paramOrCookieName" value="${crafter.engine.request.param.siteName}"/>
     </bean>
@@ -37,15 +54,20 @@
         <property name="chain">
             <list>
                 <ref bean="crafter.mappingsSiteResolver"/>
+                <ref bean="crafter.headerSiteResolver"/>
                 <ref bean="crafter.cookieSiteResolver"/>
             </list>
         </property>
     </bean>
 
-    <bean id="crafter.siteContextsBootstrap" class="org.craftercms.engine.service.context.SiteContextsBootstrap">
-        <property name="createContextsOnStartup" value="${crafter.engine.site.context.createOnStartup}"/>
-        <property name="siteContextManager" ref="crafter.siteContextManager"/>
+    <bean id="crafter.siteContextManager" class="org.craftercms.engine.service.context.SiteContextManager">
+        <property name="fallbackContextFactory" ref="crafter.fallbackSiteContextFactory"/>
+        <property name="contextFactory" ref="crafter.siteContextFactory"/>
         <property name="siteListResolver" ref="crafter.mappingsSiteResolver"/>
+        <property name="entitlementValidator" ref="crafter.entitlementValidator"/>
+        <property name="waitForContextInit" value="${crafter.engine.site.context.waitForInit}"/>
+        <property name="jobThreadPoolExecutor" ref="crafter.jobThreadPoolExecutor"/>
+        <property name="defaultSiteName" value="${crafter.engine.site.default.name}"/>
     </bean>
 
     <!-- ////////////////////////////////// -->

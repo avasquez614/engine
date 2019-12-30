@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.LocaleUtils;
+import org.craftercms.engine.service.context.SiteContext;
 import org.craftercms.engine.util.ConfigUtils;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
@@ -33,6 +34,15 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 public class ConfigAwareCookieLocaleResolver extends CookieLocaleResolver {
 
     public static final String DEFAULT_LOCALE_CONFIG_KEY = "defaultLocale";
+
+    @Override
+    public String getCookieName() {
+        SiteContext siteContext = SiteContext.getCurrent();
+        if (siteContext != null) {
+            return String.format("%s-%s", super.getCookieName(), siteContext.getSiteName());
+        }
+        return super.getCookieName();
+    }
 
     @Override
     protected Locale determineDefaultLocale(HttpServletRequest request) {

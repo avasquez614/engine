@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.craftercms.commons.http.RequestContext;
-import org.craftercms.commons.lang.Callback;
 import org.craftercms.core.service.CachingOptions;
 import org.craftercms.core.util.cache.CacheTemplate;
 import org.craftercms.engine.mobile.UserAgentTemplateDetector;
@@ -190,11 +189,11 @@ public class CrafterPageViewResolver extends WebApplicationObjectSupport impleme
     }
 
     @Override
-    public View resolveViewName(String renderUrl, Locale locale) throws Exception {
+    public View resolveViewName(String renderUrl, Locale locale)  {
         String storeUrl = urlTransformationService.transform(renderUrlToStoreUrlTransformerName, renderUrl, cacheUrlTransformations);
         View view = getCachedLocalizedView(storeUrl, locale);
 
-        if (view != null && view instanceof CrafterPageView) {
+        if (view instanceof CrafterPageView) {
             CrafterPageView pageView = (CrafterPageView)view;
 
             if (SiteProperties.isRedirectToTargetedUrl()) {
@@ -246,9 +245,9 @@ public class CrafterPageViewResolver extends WebApplicationObjectSupport impleme
             return cacheTemplate.getObject(siteContext.getContext(), cachingOptions, () -> {
                 SiteItem page = getPage(url);
                 if (page != null) {
-                    String redirectUrl = page.getItem().queryDescriptorValue(redirectUrlXPathQuery);
-                    String contentType = page.getItem().queryDescriptorValue(contentTypeXPathQuery);
-                    String forceHttps = page.getItem().queryDescriptorValue(forceHttpsXPathQuery);
+                    String redirectUrl = page.queryValue(redirectUrlXPathQuery);
+                    String contentType = page.queryValue(contentTypeXPathQuery);
+                    String forceHttps = page.queryValue(forceHttpsXPathQuery);
 
                     if (StringUtils.isNotEmpty(contentType) &&
                         StringUtils.equalsIgnoreCase(redirectContentType, contentType) &&
@@ -277,8 +276,6 @@ public class CrafterPageViewResolver extends WebApplicationObjectSupport impleme
 
                         loadScripts(siteContext.getScriptFactory(), page, view);
 
-                        view.addDependencyKey(page.getItem().getKey());
-
                         return applyLifecycleMethods(page.getStoreUrl(), view);
                     }
                 } else {
@@ -305,8 +302,6 @@ public class CrafterPageViewResolver extends WebApplicationObjectSupport impleme
                 for (String scriptUrl : scriptUrls) {
                     Script script = scriptFactory.getScript(scriptUrl);
                     scripts.add(script);
-
-                    view.addDependencyKey(script.getKey());
                 }
 
                 view.setScripts(scripts);

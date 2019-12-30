@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
@@ -59,11 +76,12 @@
 
     <bean id="crafter.freeMarkerViewResolver" class="org.craftercms.engine.view.freemarker.CrafterFreeMarkerViewResolver">
         <property name="order" value="10" />
-        <property name="cache" value="false" />
+        <property name="cache" value="#{ ! T(java.lang.Boolean).valueOf(${crafter.engine.preview:false}) }" />
         <property name="contentType" value="text/html;charset=UTF-8" />
         <property name="siteItemService" ref="crafter.siteItemService" />
         <property name="componentTemplateXPathQuery" value="${crafter.engine.component.view.name.xpathQuery}" />
         <property name="componentIncludeElementName" value="${crafter.engine.component.include.element.name}" />
+        <property name="componentEmbeddedElementName" value="${crafter.engine.component.embedded.element.name}" />
         <property name="requestContextAttribute" value="requestContext" />
         <property name="componentScriptResolver" ref="crafter.componentScriptResolver"/>
     </bean>

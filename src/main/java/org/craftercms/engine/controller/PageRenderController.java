@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ import org.craftercms.core.service.ContentStoreService;
 import org.craftercms.core.util.ExceptionUtils;
 import org.craftercms.engine.exception.HttpStatusCodeAwareException;
 import org.craftercms.engine.exception.ScriptException;
+import org.craftercms.engine.properties.SiteProperties;
 import org.craftercms.engine.scripting.Script;
 import org.craftercms.engine.scripting.ScriptFactory;
 import org.craftercms.engine.service.context.SiteContext;
@@ -75,14 +76,17 @@ public class PageRenderController extends AbstractController {
 
         if (siteContext != null) {
             if (siteContext.isFallback()) {
-                logger.warn("Rendering fallback page [" + fallbackPageUrl + "]");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Rendering fallback page [" + fallbackPageUrl + "]");
+                }
 
                 pageUrl = fallbackPageUrl;
             } else {
                 pageUrl = (String)request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
                 if (StringUtils.isEmpty(pageUrl)) {
                     throw new IllegalStateException(
-                        "Required request attribute '" + HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE + "' is not set");
+                        "Required request attribute '" + HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE +
+                        "' is not set");
                 }
 
                 Script controllerScript = getControllerScript(siteContext, request, pageUrl);
@@ -100,6 +104,16 @@ public class PageRenderController extends AbstractController {
                     } else {
                         return null;
                     }
+                }
+
+                if (SiteProperties.isSpaEnabled()) {
+                    String viewName = SiteProperties.getSpaViewName();
+
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("SPA mode enabled. Returning default view: " + viewName);
+                    }
+
+                    return new ModelAndView(viewName);
                 }
 
                 if (logger.isDebugEnabled()) {

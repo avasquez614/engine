@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.craftercms.engine.scripting.impl;
 
 import java.util.Arrays;
@@ -8,7 +25,6 @@ import org.craftercms.commons.http.RequestContext;
 import org.craftercms.core.exception.CrafterException;
 import org.craftercms.core.service.ContentStoreService;
 import org.craftercms.core.service.Context;
-import org.craftercms.core.service.Item;
 import org.craftercms.engine.model.SiteItem;
 import org.craftercms.engine.scripting.SiteItemScriptResolver;
 import org.craftercms.engine.service.context.SiteContext;
@@ -49,13 +65,11 @@ public class SiteItemScriptResolverImplTest {
 
     @Test
     public void testGetScriptUrlsExisting() throws Exception {
-        Item item = mock(Item.class);
-        when(item.queryDescriptorValue("*/content-type")).thenReturn("/page/mypage1");
-        when(item.queryDescriptorValues("*/scripts/item/key")).thenReturn(Arrays.asList(
-            "/scripts/pages/script1.groovy"));
 
         SiteItem siteItem = mock(SiteItem.class);
-        when(siteItem.getItem()).thenReturn(item);
+        when(siteItem.queryValue("content-type")).thenReturn("/page/mypage1");
+        when(siteItem.queryValues("scripts/item/key")).thenReturn(Arrays.asList(
+            "/scripts/pages/script1.groovy"));
 
         List<String> scriptUrls = scriptResolver.getScriptUrls(siteItem);
         assertNotNull(scriptUrls);
@@ -66,13 +80,10 @@ public class SiteItemScriptResolverImplTest {
 
     @Test
     public void testGetScriptUrlNotFound() throws Exception {
-        Item item = mock(Item.class);
-        when(item.queryDescriptorValue("*/content-type")).thenReturn("/page/mypage2");
-        when(item.queryDescriptorValues("*/scripts/item/key")).thenReturn(Arrays.asList(
-            "/scripts/pages/script1.groovy"));
-
         SiteItem siteItem = mock(SiteItem.class);
-        when(siteItem.getItem()).thenReturn(item);
+        when(siteItem.queryValue("content-type")).thenReturn("/page/mypage2");
+        when(siteItem.queryValues("scripts/item/key")).thenReturn(Arrays.asList(
+            "/scripts/pages/script1.groovy"));
 
         List<String> scriptUrls = scriptResolver.getScriptUrls(siteItem);
         assertNotNull(scriptUrls);
@@ -82,13 +93,10 @@ public class SiteItemScriptResolverImplTest {
 
     @Test
     public void testGetScriptUrlError() throws Exception {
-        Item item = mock(Item.class);
-        when(item.queryDescriptorValue("*/content-type")).thenReturn("/page/mypage3");
-        when(item.queryDescriptorValues("*/scripts/item/key")).thenReturn(Arrays.asList(
-                "/scripts/pages/script1.groovy"));
-
         SiteItem siteItem = mock(SiteItem.class);
-        when(siteItem.getItem()).thenReturn(item);
+        when(siteItem.queryValue("content-type")).thenReturn("/page/mypage3");
+        when(siteItem.queryValues("scripts/item/key")).thenReturn(Arrays.asList(
+            "/scripts/pages/script1.groovy"));
 
         List<String> scriptUrls = scriptResolver.getScriptUrls(siteItem);
         assertNotNull(scriptUrls);
@@ -108,9 +116,9 @@ public class SiteItemScriptResolverImplTest {
     private SiteItemScriptResolver createScriptResolver(ContentStoreService storeService) {
         SiteItemScriptResolverImpl scriptResolver = new SiteItemScriptResolverImpl();
         scriptResolver.setContentTypePattern("^/page/(.+)$");
-        scriptResolver.setContentTypeXPathQuery("*/content-type");
+        scriptResolver.setContentTypeXPathQuery("content-type");
         scriptResolver.setScriptUrlFormat("/scripts/pages/%s.groovy");
-        scriptResolver.setScriptsXPathQuery("*/scripts/item/key");
+        scriptResolver.setScriptsXPathQuery("scripts/item/key");
         scriptResolver.setStoreService(storeService);
 
         return scriptResolver;

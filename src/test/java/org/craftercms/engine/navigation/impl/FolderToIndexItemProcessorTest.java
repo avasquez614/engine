@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,6 @@ public class FolderToIndexItemProcessorTest {
         assertEquals(WEBSITE_FOLDER_URL, processedItem.getUrl());
         assertEquals(INDEX_EN_URL, processedItem.getDescriptorUrl());
         assertEquals(XML, processedItem.getDescriptorDom().asXML());
-        assertEquals(Collections.singletonList(INDEX_EN_URL), processedItem.getDependencyKeys());
     }
 
     private UrlTransformationEngine createUrlTransformationEngine() {

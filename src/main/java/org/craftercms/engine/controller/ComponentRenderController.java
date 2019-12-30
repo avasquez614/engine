@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ public class ComponentRenderController {
         this.renderComponentViewName = renderComponentViewName;
     }
 
-    @RequestMapping(method = RequestMethod.GET)
+    @RequestMapping(method = {RequestMethod.GET, RequestMethod.POST})
     protected ModelAndView render(@RequestParam("path") String path) throws Exception {
         return new ModelAndView(renderComponentViewName, COMPONENT_PATH_MODEL_NAME, path);
     }

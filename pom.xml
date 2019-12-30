@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
@@ -8,7 +25,7 @@
     <description>Crafter Content Delivery Engine</description>
     <url>https://github.com/craftercms/engine</url>
     <packaging>war</packaging>
-    <version>3.0.2</version>
+    <version>3.1.4</version><!-- craftercms version flag -->
     <organization>
         <name>CrafterCMS</name>
         <url>http://craftercms.org</url>
@@ -18,23 +35,33 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <servlet.api.version>3.0.1</servlet.api.version>
         <javax.mail.version>1.4.7</javax.mail.version>
-        <crafter.search.version>3.0.2</crafter.search.version>
-        <crafter.core.version>3.0.2</crafter.core.version>
-        <crafter.profile.version>3.0.2</crafter.profile.version>
-        <crafter.commons.version>3.0.2</crafter.commons.version>
-        <spring.version>4.3.7.RELEASE</spring.version>
+        <crafter.search.version>${project.version}</crafter.search.version>
+        <crafter.core.version>${project.version}</crafter.core.version>
+        <crafter.profile.version>${project.version}</crafter.profile.version>
+        <crafter.commons.version>${project.version}</crafter.commons.version>
+        <spring.version>4.3.18.RELEASE</spring.version>
         <httpcomponents.version>4.5.2</httpcomponents.version>
         <commons.configuration.version>2.1</commons.configuration.version>
+        <commons.lang3.version>3.5</commons.lang3.version>
         <commons.collections.version>4.1</commons.collections.version>
-        <log4j.version>1.2.17</log4j.version>
         <cglib.version>3.1</cglib.version>
-        <groovy.version>2.4.10</groovy.version>
+        <groovy.version>2.4.15</groovy.version> <!-- When this version changes the policy file needs to be updated -->
+        <groovy.sandbox.version>1.19</groovy.sandbox.version>
         <gmongo.version>1.5</gmongo.version>
-        <tika.version>1.5</tika.version>
         <junit.version>4.12</junit.version>
         <mockito.version>1.9.5</mockito.version>
         <rome.version>1.0</rome.version>
         <java.version>1.8</java.version>
+        <bouncycastle.version>1.60</bouncycastle.version>
+        <urlrewrite.version>4.0.4</urlrewrite.version>
+        <aws.version>1.11.435</aws.version>
+        <box.sdk.version>2.28.1</box.sdk.version>
+        <jackson.dataformat.version>2.9.10</jackson.dataformat.version>
+        <log4j.version>2.11.2</log4j.version>
+        <graphql.version>12.0</graphql.version>
+        <graphql.extended.scalars.version>1.0</graphql.extended.scalars.version>
+        <sardine.version>5.9</sardine.version>
+        <xerces.version>2.12.0</xerces.version>
     </properties>
 
     <licenses>
@@ -91,12 +118,12 @@
         </dependency>
         <dependency>
             <groupId>org.craftercms</groupId>
-            <artifactId>crafter-search-client</artifactId>
+            <artifactId>crafter-search-solr-client</artifactId>
             <version>${crafter.search.version}</version>
         </dependency>
         <dependency>
             <groupId>org.craftercms</groupId>
-            <artifactId>crafter-search-api</artifactId>
+            <artifactId>crafter-search-solr-api</artifactId>
             <version>${crafter.search.version}</version>
         </dependency>
         <dependency>
@@ -109,7 +136,16 @@
             <artifactId>crafter-commons-mongo</artifactId>
             <version>${crafter.commons.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.craftercms</groupId>
+            <artifactId>crafter-commons-entitlements</artifactId>
+            <version>${crafter.commons.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.craftercms</groupId>
+            <artifactId>crafter-search-elasticsearch</artifactId>
+            <version>${crafter.search.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
@@ -131,15 +167,12 @@
             <artifactId>cglib</artifactId>
             <version>${cglib.version}</version>
         </dependency>
+
+        <!-- Groovy -->
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
             <version>${groovy.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-core</artifactId>
-            <version>${tika.version}</version>
         </dependency>
 
         <dependency>
@@ -151,13 +184,13 @@
                     <groupId>org.codehaus.groovy</groupId>
                     <artifactId>groovy-all</artifactId>
                 </exclusion>
-
             </exclusions>
         </dependency>
+
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons.lang3.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -187,6 +220,93 @@
             <version>${rome.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.tuckey</groupId>
+            <artifactId>urlrewritefilter</artifactId>
+            <version>${urlrewrite.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>xerces</groupId>
+            <artifactId>xercesImpl</artifactId>
+            <version>${xerces.version}</version>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-web</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+
+        <!-- Providers -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpg-jdk15on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+
+        <!-- AWS -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+        </dependency>
+
+        <!-- Box -->
+        <dependency>
+            <groupId>com.box</groupId>
+            <artifactId>box-java-sdk</artifactId>
+            <version>${box.sdk.version}</version>
+        </dependency>
+
+        <!-- WebDAV -->
+        <dependency>
+            <groupId>com.github.lookfirst</groupId>
+            <artifactId>sardine</artifactId>
+            <version>${sardine.version}</version>
+        </dependency>
+
+        <!-- Override the bouncy castle dependency from Box -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+
+        <!-- Override the jackson dependency from AWS -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-cbor</artifactId>
+            <version>${jackson.dataformat.version}</version>
+        </dependency>
+
+        <!-- GraphQL -->
+        <dependency>
+            <groupId>com.graphql-java</groupId>
+            <artifactId>graphql-java</artifactId>
+            <version>${graphql.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.graphql-java</groupId>
+            <artifactId>graphql-java-extended-scalars</artifactId>
+            <version>${graphql.extended.scalars.version}</version>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -207,6 +327,19 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- AWS SDK -->
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bom</artifactId>
+                <version>${aws.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <finalName>ROOT</finalName>
@@ -231,7 +364,6 @@
                     <revisionOnScmFailure>unknown</revisionOnScmFailure>
                 </configuration>
             </plugin>
-
             <plugin>
                 <inherited>true</inherited>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -303,6 +435,16 @@
                             <targetPath>WEB-INF/templates/system/common</targetPath>
                         </resource>
                     </webResources>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.1</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <application.logs>target/test-logs</application.logs>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ public class CrafterPageAccessManager {
     }
 
     protected List<String> getAuthorizedRolesForPage(SiteItem page) {
-        return page.getItem().queryDescriptorValues(authorizedRolesXPathQuery);
+        return page.queryValues(authorizedRolesXPathQuery);
     }
 
     protected boolean containsRole(String role, List<String> roles) {

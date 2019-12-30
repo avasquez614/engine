@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,12 +37,15 @@ import org.craftercms.core.service.Item;
 import org.craftercms.core.service.ItemFilter;
 import org.craftercms.core.service.Tree;
 import org.craftercms.core.service.impl.CompositeItemFilter;
+import org.craftercms.engine.model.DefaultSiteItem;
+import org.craftercms.engine.model.EmbeddedSiteItem;
 import org.craftercms.engine.model.SiteItem;
 import org.craftercms.engine.service.SiteItemService;
 import org.craftercms.engine.service.context.SiteContext;
 import org.craftercms.engine.service.filter.ExcludeByNameItemFilter;
 import org.craftercms.engine.service.filter.ExpectedNodeValueItemFilter;
 import org.craftercms.engine.service.filter.IncludeByNameItemFilter;
+import org.dom4j.Element;
 import org.springframework.beans.factory.annotation.Required;
 
 /**
@@ -56,7 +59,7 @@ public class SiteItemServiceImpl implements SiteItemService {
     protected List<Predicate<Item>> defaultPredicates;
     protected List<ItemFilter> defaultFilters;
     protected List<ItemProcessor> defaultProcessors;
-    protected Map<String, Converter<String, ?>> modelValueConverters;
+    protected Converter<Element, Object> modelFieldConverter;
     protected Comparator<SiteItem> sortComparator;
 
     @Required
@@ -77,8 +80,8 @@ public class SiteItemServiceImpl implements SiteItemService {
     }
 
     @Required
-    public void setModelValueConverters(Map<String, Converter<String, ?>> modelValueConverters) {
-        this.modelValueConverters = modelValueConverters;
+    public void setModelFieldConverter(Converter<Element, Object> modelFieldConverter) {
+        this.modelFieldConverter = modelFieldConverter;
     }
 
     public void setSortComparator(Comparator<SiteItem> sortComparator) {
@@ -88,6 +91,11 @@ public class SiteItemServiceImpl implements SiteItemService {
     @Override
     public Content getRawContent(String url) {
         return storeService.findContent(getSiteContext().getContext(), url);
+    }
+
+    @Override
+    public SiteItem getSiteItem(final SiteItem parent, final Element element) {
+        return new EmbeddedSiteItem(parent, element, modelFieldConverter);
     }
 
     @Override
@@ -102,6 +110,12 @@ public class SiteItemServiceImpl implements SiteItemService {
 
     @Override
     public SiteItem getSiteItem(String url, ItemProcessor processor, Predicate<Item> predicate) {
+        SiteContext context = getSiteContext();
+
+        if(!storeService.exists(context.getContext(), url)) {
+            return null;
+        }
+
         if (CollectionUtils.isNotEmpty(defaultPredicates)) {
             List<Predicate<Item>> predicates = new ArrayList<>(defaultPredicates);
 
@@ -121,7 +135,7 @@ public class SiteItemServiceImpl implements SiteItemService {
             processor = processorPipeline;
         }
 
-        Item item = storeService.findItem(getSiteContext().getContext(), null, url, processor);
+        Item item = storeService.findItem(context.getContext(), null, url, processor);
         if (item != null && (predicate == null || predicate.evaluate(item))) {
             return createItemWrapper(item);
         } else {
@@ -233,7 +247,7 @@ public class SiteItemServiceImpl implements SiteItemService {
     }
 
     protected SiteItem createItemWrapper(Item item) {
-        return new SiteItem(item, modelValueConverters, sortComparator);
+        return new DefaultSiteItem(item, modelFieldConverter, sortComparator);
     }
 
 }

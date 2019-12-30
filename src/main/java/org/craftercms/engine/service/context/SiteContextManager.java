@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,47 +16,48 @@
  */
 package org.craftercms.engine.service.context;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import javax.annotation.PreDestroy;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.craftercms.core.exception.RootFolderNotFoundException;
-import org.craftercms.engine.event.SiteContextCreatedEvent;
-import org.craftercms.engine.event.SiteContextDestroyedEvent;
+import org.craftercms.commons.entitlements.exception.EntitlementException;
+import org.craftercms.commons.entitlements.model.EntitlementType;
+import org.craftercms.commons.entitlements.validator.EntitlementValidator;
 import org.springframework.beans.factory.annotation.Required;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ApplicationEvent;
+
+import javax.annotation.PreDestroy;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Registry and lifecycle manager of {@link SiteContext}s.
  *
  * @author Alfonso Vásquez
  */
-public class SiteContextManager implements ApplicationContextAware {
+public class SiteContextManager {
 
     private static final Log logger = LogFactory.getLog(SiteContextManager.class);
 
-    protected Lock lock;
+    protected SiteLockFactory siteLockFactory;
     protected Map<String, SiteContext> contextRegistry;
     protected SiteContextFactory contextFactory;
     protected SiteContextFactory fallbackContextFactory;
-    protected ApplicationContext applicationContext;
+    protected SiteListResolver siteListResolver;
+    protected EntitlementValidator entitlementValidator;
+    protected boolean waitForContextInit;
+    protected Executor jobThreadPoolExecutor;
+    protected String defaultSiteName;
 
     public SiteContextManager() {
-        lock = new ReentrantLock();
+        siteLockFactory = new SiteLockFactory();
         contextRegistry = new ConcurrentHashMap<>();
-    }
-
-    public Lock getLock() {
-        return lock;
     }
 
     @Required
@@ -69,9 +70,29 @@ public class SiteContextManager implements ApplicationContextAware {
         this.fallbackContextFactory = fallbackContextFactory;
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+    @Required
+    public void setSiteListResolver(final SiteListResolver siteListResolver) {
+        this.siteListResolver = siteListResolver;
+    }
+
+    @Required
+    public void setEntitlementValidator(final EntitlementValidator entitlementValidator) {
+        this.entitlementValidator = entitlementValidator;
+    }
+
+    @Required
+    public void setWaitForContextInit(boolean waitForContextInit) {
+        this.waitForContextInit = waitForContextInit;
+    }
+
+    @Required
+    public void setJobThreadPoolExecutor(Executor jobThreadPoolExecutor) {
+        this.jobThreadPoolExecutor = jobThreadPoolExecutor;
+    }
+
+    @Required
+    public void setDefaultSiteName(final String defaultSiteName) {
+        this.defaultSiteName = defaultSiteName;
     }
 
     @PreDestroy
@@ -83,18 +104,50 @@ public class SiteContextManager implements ApplicationContextAware {
         return contextRegistry.values();
     }
 
-    public void createContexts(Collection<String> siteNames) {
+    /**
+     * Creates all contexts (if not already created) from the site list resolver
+     *
+     * @param concurrent if the context creation should be done concurrently
+     */
+    public void createContexts(boolean concurrent) {
+        Collection<String> siteNames = siteListResolver.getSiteList();
+
         logger.info("==================================================");
         logger.info("<CREATING SITE CONTEXTS>");
         logger.info("==================================================");
 
         if (CollectionUtils.isNotEmpty(siteNames)) {
-            for (String siteName : siteNames) {
-                try {
-                    // If the site context doesn't exist (it's new), it will be created
-                    createContext(siteName, false);
-                } catch (Exception e) {
-                    logger.error("Error creating site context for site '" + siteName + "'", e);
+            if (concurrent) {
+                CompletionService<SiteContext> cs = new ExecutorCompletionService<>(jobThreadPoolExecutor);
+                for (String siteName : siteNames) {
+                    cs.submit(() -> {
+                        try {
+                            // If the site context doesn't exist (it's new), it will be created
+                            return getContext(siteName, false);
+                        } catch (Exception e) {
+                            logger.error("Error creating site context for site '" + siteName + "'", e);
+                        }
+
+                        return null;
+                    });
+                }
+
+                for (int i = 0; i < siteNames.size(); i++) {
+                    try {
+                        cs.take();
+                    } catch (InterruptedException e) {
+                        logger.error("Stopping creation of site contexts, thread interrupted");
+                        return;
+                    }
+                }
+            } else {
+                for (String siteName : siteNames) {
+                    try {
+                        // If the site context doesn't exist (it's new), it will be created
+                        getContext(siteName, false);
+                    } catch (Exception e) {
+                        logger.error("Error creating site context for site '" + siteName + "'", e);
+                    }
                 }
             }
         }
@@ -104,44 +157,151 @@ public class SiteContextManager implements ApplicationContextAware {
         logger.info("==================================================");
     }
 
-    public SiteContext createContext(String siteName, boolean fallback) {
-        return getContext(siteName, fallback);
+    public void syncContexts() {
+        logger.debug("Syncing the site contexts ...");
+
+        Collection<String> siteNames = siteListResolver.getSiteList();
+
+        // destroy the contexts for sites in the registry that are not present anymore (except fallback sites)
+        contextRegistry.forEach((siteName, siteContext) -> {
+            if (!siteContext.isFallback() && !siteNames.contains(siteName)) {
+                try {
+                    destroyContext(siteName);
+                } catch (Exception e) {
+                    logger.error("Error destroying site context for site '" + siteName + "'", e);
+                }
+            }
+        });
+
+        // create the contexts for new sites
+        siteNames.forEach(siteName -> {
+            try {
+                getContext(siteName, false);
+            } catch (Exception e) {
+                logger.error("Error creating site context for site '" + siteName + "'", e);
+            }
+        });
     }
 
+    /**
+     * Destroys all contexts
+     */
     public void destroyAllContexts() {
         logger.info("==================================================");
         logger.info("<DESTROYING SITE CONTEXTS>");
         logger.info("==================================================");
 
-        lock.lock();
-        try {
-            for (Iterator<SiteContext> iter = contextRegistry.values().iterator(); iter.hasNext();) {
-                SiteContext siteContext = iter.next();
-                String siteName = siteContext.getSiteName();
 
-                logger.info("==================================================");
-                logger.info("<Destroying site context: " + siteName + ">");
-                logger.info("==================================================");
+        for (Iterator<SiteContext> iter = contextRegistry.values().iterator(); iter.hasNext();) {
+            SiteContext siteContext = iter.next();
+            String siteName = siteContext.getSiteName();
 
-                try {
-                    destroyContext(siteContext);
-                } catch (Exception e) {
-                    logger.error("Error destroying site context for site '" + siteName + "'", e);
-                }
+            logger.info("==================================================");
+            logger.info("<Destroying site context: " + siteName + ">");
+            logger.info("==================================================");
 
-                logger.info("==================================================");
-                logger.info("</Destroying site context: " + siteName + ">");
-                logger.info("==================================================");
-
-                iter.remove();
+            Lock lock = siteLockFactory.getLock(siteName);
+            lock.lock();
+            try {
+                destroyContext(siteContext);
+            } catch (Exception e) {
+                logger.error("Error destroying site context for site '" + siteName + "'", e);
+            } finally {
+                lock.unlock();
             }
-        } finally {
-            lock.unlock();
+
+            logger.info("==================================================");
+            logger.info("</Destroying site context: " + siteName + ">");
+            logger.info("==================================================");
+
+            iter.remove();
         }
 
         logger.info("==================================================");
         logger.info("</DESTROYING SITE CONTEXTS>");
         logger.info("==================================================");
+    }
+
+    /**
+     * Gets the {@link SiteContext} for the specified site name. If no context exists, a new one is created.
+     *
+     * @param siteName the context's site name
+     * @param fallback if the context is a fallback (which means it will be used if no context can be resolved during
+     *                 requests
+     *
+     * @return the context
+     */
+    public SiteContext getContext(String siteName, boolean fallback) {
+        SiteContext siteContext = contextRegistry.get(siteName);
+        if (siteContext == null) {
+            if (!fallback && !siteName.equals(defaultSiteName) && !validateSiteCreationEntitlement()) {
+                return null;
+            }
+
+            Lock lock = siteLockFactory.getLock(siteName);
+            lock.lock();
+            try {
+                // Double check locking, in case the context has been created already by another thread
+                siteContext = contextRegistry.get(siteName);
+                if (siteContext == null) {
+                    logger.info("==================================================");
+                    logger.info("<Creating site context: " + siteName + ">");
+                    logger.info("==================================================");
+
+                    siteContext = createContext(siteName, fallback);
+
+                    logger.info("==================================================");
+                    logger.info("</Creating site context: " + siteName + ">");
+                    logger.info("==================================================");
+                }
+            } finally {
+                lock.unlock();
+            }
+        } else if (!siteContext.isValid()) {
+            logger.error("Site context " + siteContext + " is not valid anymore");
+
+            destroyContext(siteName);
+
+            siteContext = null;
+        }
+
+        return siteContext;
+    }
+
+    /**
+     * Starts a context rebuild in the background
+     *
+     * @param siteName the site name of the context
+     * @param fallback if the new context should be a fallback context
+     */
+    public void startContextRebuild(String siteName, boolean fallback) {
+        jobThreadPoolExecutor.execute(() -> rebuildContext(siteName, fallback));
+    }
+
+    /**
+     * Destroys the context for the specified site name
+     *
+     * @param siteName the site name of the context to destroy
+     */
+    public void destroyContext(String siteName) {
+        Lock lock = siteLockFactory.getLock(siteName);
+        lock.lock();
+        try {
+            SiteContext siteContext = contextRegistry.remove(siteName);
+            if (siteContext != null) {
+                logger.info("==================================================");
+                logger.info("<Destroying site context: " + siteName + ">");
+                logger.info("==================================================");
+
+                destroyContext(siteContext);
+
+                logger.info("==================================================");
+                logger.info("</Destroying site context: " + siteName + ">");
+                logger.info("==================================================");
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     protected void destroyContexts(Collection<String> siteNames) {
@@ -164,87 +324,80 @@ public class SiteContextManager implements ApplicationContextAware {
         logger.info("==================================================");
     }
 
-    public void destroyContext(String siteName) {
+    protected SiteContext createContext(String siteName, boolean fallback) {
+        SiteContext siteContext;
+
+        if (fallback) {
+            siteContext = fallbackContextFactory.createContext(siteName);
+            siteContext.setFallback(true);
+        } else {
+            siteContext = contextFactory.createContext(siteName);
+        }
+
+        siteContext.init(waitForContextInit);
+
+        contextRegistry.put(siteName, siteContext);
+
+        logger.info("Site context created: " + siteContext);
+
+        return siteContext;
+    }
+
+    protected void rebuildContext(String siteName, boolean fallback) {
+        Lock lock = siteLockFactory.getLock(siteName);
         lock.lock();
         try {
-            SiteContext siteContext = contextRegistry.remove(siteName);
-            if (siteContext != null) {
-                logger.info("==================================================");
-                logger.info("<Destroying site context: " + siteName + ">");
-                logger.info("==================================================");
+            logger.info("==================================================");
+            logger.info("<Rebuilding site context: " + siteName + ">");
+            logger.info("==================================================");
 
-                destroyContext(siteContext);
+            SiteContext oldSiteContext = contextRegistry.get(siteName);
 
-                logger.info("==================================================");
-                logger.info("</Destroying site context: " + siteName + ">");
-                logger.info("==================================================");
-            }
+            createContext(siteName, fallback);
+
+            oldSiteContext.destroy();
+
+            logger.info("==================================================");
+            logger.info("</Rebuilding site context: " + siteName + ">");
+            logger.info("==================================================");
         } finally {
             lock.unlock();
         }
     }
 
-    public SiteContext getContext(String siteName, boolean fallback) {
-        SiteContext siteContext = contextRegistry.get(siteName);
-        if (siteContext == null) {
-            lock.lock();
-            try {
-                // Double check locking, in case the context has been created already by another thread
-                siteContext = contextRegistry.get(siteName);
-                if (siteContext == null) {
-                    logger.info("==================================================");
-                    logger.info("<Creating site context: " + siteName + ">");
-                    logger.info("==================================================");
-
-                    if (fallback) {
-                        siteContext = fallbackContextFactory.createContext(siteName);
-                        siteContext.setFallback(true);
-                    } else {
-                        siteContext = contextFactory.createContext(siteName);
-                    }
-
-                    publishEvent(new SiteContextCreatedEvent(siteContext, this), siteContext);
-
-                    contextRegistry.put(siteName, siteContext);
-
-                    logger.info("Site context created: " + siteContext);
-                    logger.info("==================================================");
-                    logger.info("</Creating site context: " + siteName + ">");
-                    logger.info("==================================================");
-                }
-            } catch (RootFolderNotFoundException e) {
-                logger.error("Cannot resolve root folder for site '" + siteName + "'", e);
-            } finally {
-                lock.unlock();
-            }
-        } else {
-            if (!siteContext.isValid()) {
-                logger.error("Site context " + siteContext + " is not valid anymore");
-
-                destroyContext(siteName);
-
-                siteContext = null;
-            }
-        }
-
-        return siteContext;
-    }
-
     protected void destroyContext(SiteContext siteContext) {
-        publishEvent(new SiteContextDestroyedEvent(siteContext, this), siteContext);
-
         siteContext.destroy();
 
         logger.info("Site context destroyed: " + siteContext);
     }
 
-    protected void publishEvent(ApplicationEvent event, SiteContext siteContext) {
-        ApplicationContext siteApplicationContext = siteContext.getApplicationContext();
-        if (siteApplicationContext != null) {
-            siteApplicationContext.publishEvent(event);
-        } else {
-            applicationContext.publishEvent(event);
+    protected boolean validateSiteCreationEntitlement() {
+        try {
+            entitlementValidator.validateEntitlement(EntitlementType.SITE, 1);
+            return true;
+        } catch (EntitlementException e) {
+            return false;
         }
+    }
+
+    protected static class SiteLockFactory {
+
+        protected Map<String, Lock> locks;
+
+        public SiteLockFactory() {
+            locks = new WeakHashMap<>();
+        }
+
+        public synchronized Lock getLock(String siteName) {
+            Lock lock = locks.get(siteName);
+            if (lock == null) {
+                lock = new ReentrantLock();
+                locks.put(siteName, lock);
+            }
+
+            return lock;
+        }
+
     }
 
 }

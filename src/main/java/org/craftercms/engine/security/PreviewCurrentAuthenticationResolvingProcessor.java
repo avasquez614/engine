@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@ public class PreviewCurrentAuthenticationResolvingProcessor extends CurrentAuthe
 
             profile.setAttributes(attributesNoUsernameNoRoles);
 
-            SecurityUtils.setAuthentication(request, new PersonaAuthentication(profile));
+            SecurityUtils.setAuthentication(request, new PreAuthenticatedProfile(profile));
 
             processorChain.processRequest(context);
         } else {

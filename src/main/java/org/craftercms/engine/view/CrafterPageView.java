@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,8 +16,6 @@
  */
 package org.craftercms.engine.view;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -133,52 +131,6 @@ public class CrafterPageView extends AbstractView implements CachingAwareObject,
     }
 
     @Override
-    public List<Object> getDependencyKeys() {
-        return dependencyKeys;
-    }
-
-    @Override
-    public void setDependencyKeys(List<Object> dependencyKeys) {
-        this.dependencyKeys = dependencyKeys;
-    }
-
-    @Override
-    public void addDependencyKeys(Collection<Object> dependencyKeys) {
-        if (this.dependencyKeys == null) {
-            this.dependencyKeys = new ArrayList<>();
-        }
-
-        this.dependencyKeys.addAll(dependencyKeys);
-    }
-
-    @Override
-    public void addDependencyKey(Object dependencyKey) {
-        if (dependencyKeys == null) {
-            dependencyKeys = new ArrayList<>();
-        }
-
-        dependencyKeys.add(dependencyKey);
-    }
-
-    @Override
-    public boolean removeDependencyKeys(Collection<Object> dependencyKeys) {
-        if (this.dependencyKeys != null) {
-            return this.dependencyKeys.removeAll(dependencyKeys);
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public boolean removeDependencyKey(Object dependencyKey) {
-        if (dependencyKeys != null) {
-            return dependencyKeys.remove(dependencyKey);
-        } else {
-            return false;
-        }
-    }
-
-    @Override
     public Long getCachingTime() {
         return cachingTime;
     }
@@ -256,7 +208,7 @@ public class CrafterPageView extends AbstractView implements CachingAwareObject,
     }
 
     protected String getPageViewName() throws RenderingException {
-        String pageViewName = page.getItem().queryDescriptorValue(pageViewNameXPathQuery);
+        String pageViewName = page.queryValue(pageViewNameXPathQuery);
         if (StringUtils.isNotEmpty(pageViewName)) {
             return pageViewName;
         } else {
@@ -265,7 +217,7 @@ public class CrafterPageView extends AbstractView implements CachingAwareObject,
     }
 
     protected String getMimeType() {
-        return page.getItem().queryDescriptorValue(mimeTypeXPathQuery);
+        return page.queryValue(mimeTypeXPathQuery);
     }
 
     protected void renderActualView(String pageViewName, Map<String, Object> model, HttpServletRequest request,

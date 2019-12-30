@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,19 @@ import org.craftercms.engine.util.ConfigUtils;
  */
 public class SiteProperties {
 
+    public static final String INDEX_FILE_NAME_CONFIG_KEY = "indexFileName";
+    public static final String DISABLE_FULL_MODEL_TYPE_CONVERSION_CONFIG_KEY = "compatibility.disableFullModelTypeConversion";
+    public static final String NAVIGATION_ADDITIONAL_FIELDS_CONFIG_KEY = "navigation.additionalFields";
+
+    /*
+     * Single Page Application properties
+     */
+    public static final String SPA_ENABLED_CONFIG_KEY = "spa.enabled";
+    public static final String SPA_VIEW_NAME = "spa.viewName";
+
+    /*
+     * Targeting properties
+     */
     public static final String TARGETING_ENABLED_CONFIG_KEY = "targeting.enabled";
     public static final String AVAILABLE_TARGET_IDS_CONFIG_KEY = "targeting.availableTargetIds";
     public static final String FALLBACK_ID_CONFIG_KEY = "targeting.fallbackTargetId";
@@ -33,9 +46,12 @@ public class SiteProperties {
     public static final String EXCLUDE_PATTERNS_CONFIG_KEY = "targeting.excludePatterns";
     public static final String MERGE_FOLDERS_CONFIG_KEY = "targeting.mergeFolders";
     public static final String REDIRECT_TO_TARGETED_URL_CONFIG_KEY = "targeting.redirectToTargetedUrl";
-    public static final String INDEX_FILE_NAME_CONFIG_KEY = "indexFileName";
 
+    /*
+     * Defaults
+     */
     public static final String DEFAULT_INDEX_FILE_NAME = "index.xml";
+    public static final String DEFAULT_SPA_VIEW_NAME = "/";
 
     /**
      * Returns trues if targeting is enabled.
@@ -132,6 +148,64 @@ public class SiteProperties {
             return config.getString(INDEX_FILE_NAME_CONFIG_KEY, DEFAULT_INDEX_FILE_NAME);
         } else {
             return DEFAULT_INDEX_FILE_NAME;
+        }
+    }
+
+    /**
+     * Returns true if full content model type conversion should be disabled.
+     *
+     * Up to and including version 2:
+     * Crafter Engine, in the FreeMarker host only, converts model elements based on a suffix type hint, but only for the first level in
+     * the model, and not for _dt. For example, for contentModel.myvalue_i Integer is returned, but for contentModel.repeater.myvalue_i
+     * and contentModel.date_dt a String is returned. In the Groovy host no type of conversion was performed.
+     *
+     * In version 3 onwards, Crafter Engine converts elements with any suffix type hints (including _dt) at at any level in the content
+     * model and for both Freemarker and Groovy hosts.
+     */
+    public static boolean isDisableFullModelTypeConversion() {
+        Configuration config = ConfigUtils.getCurrentConfig();
+        if (config != null) {
+            return config.getBoolean(DISABLE_FULL_MODEL_TYPE_CONVERSION_CONFIG_KEY, false);
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the list of additional fields that navigation items should extract from the item descriptor.
+     */
+    public static String[] getNavigationAdditionalFields() {
+        Configuration config = ConfigUtils.getCurrentConfig();
+        if(config != null && config.containsKey(NAVIGATION_ADDITIONAL_FIELDS_CONFIG_KEY)) {
+            return config.getStringArray(NAVIGATION_ADDITIONAL_FIELDS_CONFIG_KEY);
+        } else {
+            return new String[] {};
+        }
+    }
+
+    /**
+     * Returns true if SPA (Single Page App) mode is enabled.
+     */
+    public static boolean isSpaEnabled() {
+        Configuration config = ConfigUtils.getCurrentConfig();
+        if (config != null) {
+            return config.getBoolean(SPA_ENABLED_CONFIG_KEY, false);
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the view name for the SPA (Single Page Application). Current view names can be a page URL (like /)
+     * or a template name (like /template/web/app.ftl). By default, if SPA is enabled and no view name config property
+     * is found, / is returned.
+     */
+    public static String getSpaViewName() {
+        Configuration config = ConfigUtils.getCurrentConfig();
+        if (config != null) {
+            return config.getString(SPA_VIEW_NAME, DEFAULT_SPA_VIEW_NAME);
+        } else {
+            return DEFAULT_SPA_VIEW_NAME;
         }
     }
 

@@ -1,7 +1,21 @@
-package org.craftercms.engine.controller.rest;
+/*
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-import java.util.Collection;
-import java.util.Map;
+package org.craftercms.engine.controller.rest;
 
 import org.craftercms.core.controller.rest.CacheRestController;
 import org.craftercms.core.exception.CacheException;
@@ -10,6 +24,9 @@ import org.craftercms.engine.service.context.SiteContext;
 import org.craftercms.engine.service.context.SiteContextManager;
 import org.springframework.beans.factory.annotation.Required;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Extension of {@link org.craftercms.core.controller.rest.CacheRestController} that adds the functionality of
@@ -27,7 +44,7 @@ public class FreeMarkerAwareCacheRestController extends CacheRestController {
     }
 
     @Override
-    public Map<String, String> clearAllScopes() throws CacheException {
+    public Map<String, Object> clearAllScopes() throws CacheException {
         Collection<SiteContext> contexts = siteContextManager.listContexts();
 
         for (SiteContext siteContext : contexts) {
@@ -38,7 +55,7 @@ public class FreeMarkerAwareCacheRestController extends CacheRestController {
     }
 
     @Override
-    public Map<String, String> clearScope(@RequestParam(CacheRestController.REQUEST_PARAM_CONTEXT_ID) String contextId)
+    public Map<String, Object> clearScope(@RequestParam(CacheRestController.REQUEST_PARAM_CONTEXT_ID) String contextId)
         throws InvalidContextException, CacheException {
         Collection<SiteContext> contexts = siteContextManager.listContexts();
 

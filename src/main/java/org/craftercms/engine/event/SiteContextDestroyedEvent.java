@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Crafter Software Corporation.
+ * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,31 +17,21 @@
 package org.craftercms.engine.event;
 
 import org.craftercms.engine.service.context.SiteContext;
-import org.springframework.context.ApplicationEvent;
 
 /**
- * Event published when a {@link SiteContext} is destroyed.
+ * Event published when a {@link SiteContext} has been destroyed.
  *
  * @author avasquez
  */
-public class SiteContextDestroyedEvent extends ApplicationEvent {
-
-    protected SiteContext siteContext;
+public class SiteContextDestroyedEvent extends SiteEvent {
 
     /**
      * Create a new event.
      *
-     * @param siteContext   the SiteContext destroyed
-     * @param source        the component that published the event (never {@code null})
+     * @param siteContext   the site's context
      */
-    public SiteContextDestroyedEvent(SiteContext siteContext, Object source) {
-        super(source);
-
-        this.siteContext = siteContext;
-    }
-
-    public SiteContext getSiteContext() {
-        return siteContext;
+    public SiteContextDestroyedEvent(SiteContext siteContext) {
+        super(siteContext);
     }
 
 }

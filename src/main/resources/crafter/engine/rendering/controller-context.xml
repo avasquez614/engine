@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:util="http://www.springframework.org/schema/util"
@@ -31,6 +48,12 @@
         <property name="disableCaching" value="${crafter.engine.staticAssets.disableCaching}"/>
     </bean>
 
+    <bean id="crafter.remoteAssetsRequestHandler" class="org.craftercms.engine.controller.RemoteAssetsRequestHandler"
+          init-method="init">
+        <property name="remoteFileResolver" ref="crafter.remoteFileResolver"/>
+        <property name="disableCaching" value="${crafter.engine.remoteAssets.disableCaching}"/>
+    </bean>
+
     <bean id="crafter.pageRenderController" class="org.craftercms.engine.controller.PageRenderController">
         <property name="fallbackPageUrl" value="/no-site.html"/>
         <property name="storeService" ref="crafter.contentStoreService"/>
@@ -40,18 +63,39 @@
         <property name="errorViewNamePrefix" value="${crafter.engine.error.viewName.prefix}"/>
     </bean>
 
-    <bean id="crafter.monitoringRenderController" class="org.craftercms.engine.controller.MonitoringController"/>
+    <bean id="crafter.monitoringRenderController" class="org.craftercms.engine.controller.rest.MonitoringController"/>
 
     <bean id="crafter.siteContextRestController" class="org.craftercms.engine.controller.rest.SiteContextRestController">
-        <property name="contextRegistry" ref="crafter.siteContextManager"/>
+        <property name="contextManager" ref="crafter.siteContextManager"/>
     </bean>
 
     <bean id="crafter.siteContentStoreRestController" class="org.craftercms.engine.controller.rest.SiteContentStoreRestController">
         <property name="wrappedController" ref="crafter.contentStoreRestController"/>
     </bean>
 
-    <bean id="crafter.siteCacheRestController" class="org.craftercms.engine.controller.rest.SiteCacheRestController">
-        <property name="cacheService" ref="crafter.cacheService"/>
+    <bean id="crafter.siteCacheRestController" class="org.craftercms.engine.controller.rest.SiteCacheRestController"/>
+
+    <bean id="crafter.siteNavigationRestController" class="org.craftercms.engine.controller.rest.SiteNavigationController">
+        <property name="navTreeBuilder" ref="crafter.navTreeBuilder"/>
+        <property name="navBreadcrumbBuilder" ref="crafter.navBreadcrumbBuilder"/>
+    </bean>
+
+    <bean id="crafter.siteScheduledJobsController"
+          class="org.craftercms.engine.controller.rest.SiteScheduledJobsController"/>
+
+    <bean id="crafter.siteUrlRestController" class="org.craftercms.engine.controller.rest.SiteUrlController">
+        <property name="urlTransformationService" ref="crafter.urlTransformationService"/>
+    </bean>
+
+    <bean id="crafter.siteElasticsearchController"
+          class="org.craftercms.engine.controller.rest.SiteElasticsearchController">
+        <property name="elasticsearchService" ref="crafter.elasticsearchService"/>
+    </bean>
+
+    <bean id="crafter.siteGraphQLController" class="org.craftercms.engine.controller.rest.SiteGraphQLController"/>
+
+    <bean id="crafter.siteConfigController" class="org.craftercms.engine.controller.rest.ConfigRestController">
+        <property name="modePreview" value="${crafter.engine.preview}"/>
     </bean>
 
     <!-- Overwrite CacheRestController from core -->
@@ -65,6 +109,7 @@
         <entry key="/api/**" value-ref="crafter.restScriptsController"/>
         <entry key="/api/1/services/**" value-ref="crafter.restScriptsController"/> <!-- Deprecated mapping, might be removed in a later version -->
         <entry key="/static-assets/**" value-ref="crafter.staticAssetsRequestHandler"/>
+        <entry key="/remote-assets/**" value-ref="crafter.remoteAssetsRequestHandler"/>
         <entry key="/*" value-ref="crafter.pageRenderController"/>
     </util:map>
 
